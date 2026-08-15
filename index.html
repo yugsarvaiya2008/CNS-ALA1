@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CipherRelay — AES + RSA Secure Messaging</title>
+<meta name="description" content="Client-side secure messaging demo using AES-GCM for the message and RSA-OAEP to wrap the key.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">⛓</span>
+      <span class="brand-text">CipherRelay</span>
+    </div>
+    <div class="brand-sub">AES-256-GCM &nbsp;×&nbsp; RSA-OAEP-2048</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">Hybrid encryption, entirely in your browser</p>
+      <h1>Lock a message the way real systems do.</h1>
+      <p class="lede">
+        Your message is sealed with a fast <strong>AES-256</strong> key. That key is then
+        wrapped in <strong>RSA-2048</strong> so only the holder of the matching private key
+        can ever unlock it. Nothing here touches a server — every operation runs on
+        the Web Crypto API, on this device, right now.
+      </p>
+    </div>
+    <div class="hero-scene" aria-hidden="true">
+      <div class="scramble" id="scramble">INITIALIZING</div>
+      <div class="pipeline">
+        <div class="pipe-step" data-step="1"><span>plaintext</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="2"><span>AES-256</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="3"><span>RSA-wrapped key</span></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step" data-step="4"><span>ciphertext</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY STATUS -->
+  <section class="wrap keys-panel">
+    <div class="panel-head">
+      <h2>Recipient keypair</h2>
+      <button id="regenKeys" class="btn ghost small">Generate new keypair</button>
+    </div>
+    <p class="hint">
+      A 2048-bit RSA keypair is generated on load and stored only in this browser
+      (<code>localStorage</code>). The public key wraps the AES key when encrypting;
+      the private key unwraps it when decrypting. This mirrors the outline — key
+      exchange handled by RSA — without needing any backend.
+    </p>
+    <div class="key-grid">
+      <div class="key-box">
+        <div class="key-label">Public key <span class="tag">used to encrypt the AES key</span></div>
+        <textarea id="pubKeyOut" readonly rows="4"></textarea>
+      </div>
+      <div class="key-box">
+        <div class="key-label">
+          Private key <span class="tag">used to decrypt the AES key</span>
+          <button id="togglePriv" class="btn ghost tiny" type="button">show</button>
+        </div>
+        <textarea id="privKeyOut" readonly rows="4" class="masked"></textarea>
+      </div>
+    </div>
+    <p class="status" id="keyStatus">Generating keypair…</p>
+  </section>
+
+  <!-- TABS -->
+  <section class="wrap panel">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="encrypt" role="tab" aria-selected="true">Encrypt</button>
+      <button class="tab" data-tab="decrypt" role="tab" aria-selected="false">Decrypt</button>
+    </div>
+
+    <!-- ENCRYPT PANEL -->
+    <div class="tab-panel active" id="panel-encrypt">
+      <label class="field-label" for="plaintextIn">Message to encrypt</label>
+      <textarea id="plaintextIn" rows="4" placeholder="Type the message you want to seal…"></textarea>
+
+      <button id="encryptBtn" class="btn primary">Encrypt message</button>
+
+      <div class="output-grid" id="encryptOutput" hidden>
+        <div class="out-box">
+          <div class="out-label">Ciphertext <span class="tag">AES-GCM, base64</span></div>
+          <textarea readonly rows="3" id="outCiphertext"></textarea>
+        </div>
+        <div class="out-box">
+          <div class="out-label">IV / nonce <span class="tag">base64</span></div>
+          <textarea readonly rows="2" id="outIv"></textarea>
+        </div>
+        <div class="out-box">
+          <div class="out-label">Encrypted AES key <span class="tag">RSA-OAEP, base64</span></div>
+          <textarea readonly rows="3" id="outEncKey"></textarea>
+        </div>
+      </div>
+      <p class="hint" id="encryptHint" hidden>
+        Sent to the decrypt panel automatically — or copy these three values and
+        paste them there yourself to see the round trip explicitly.
+      </p>
+    </div>
+
+    <!-- DECRYPT PANEL -->
+    <div class="tab-panel" id="panel-decrypt">
+      <label class="field-label" for="inCiphertext">Ciphertext (base64)</label>
+      <textarea id="inCiphertext" rows="3" placeholder="Paste AES-GCM ciphertext…"></textarea>
+
+      <label class="field-label" for="inIv">IV / nonce (base64)</label>
+      <textarea id="inIv" rows="1" placeholder="Paste the IV…"></textarea>
+
+      <label class="field-label" for="inEncKey">Encrypted AES key (base64)</label>
+      <textarea id="inEncKey" rows="3" placeholder="Paste the RSA-wrapped AES key…"></textarea>
+
+      <button id="decryptBtn" class="btn primary">Decrypt message</button>
+
+      <div class="output-grid" id="decryptOutput" hidden>
+        <div class="out-box wide">
+          <div class="out-label">Recovered plaintext</div>
+          <textarea readonly rows="3" id="outPlaintext"></textarea>
+        </div>
+      </div>
+      <p class="status error" id="decryptError" hidden></p>
+    </div>
+  </section>
+
+  <section class="wrap howitworks">
+    <h2>What's actually happening</h2>
+    <ol>
+      <li><strong>Generate:</strong> the browser creates a random AES-256 key and a random IV — used once, for this message only.</li>
+      <li><strong>Seal the message:</strong> AES-GCM encrypts the plaintext with that key, producing ciphertext plus an authentication tag baked in.</li>
+      <li><strong>Wrap the key:</strong> the AES key itself is encrypted with the recipient's RSA public key, so it can travel alongside the ciphertext without exposing it.</li>
+      <li><strong>Unwrap and open:</strong> the recipient's RSA private key recovers the AES key, which then decrypts the ciphertext back to plaintext.</li>
+    </ol>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <span>CipherRelay — built for a CNS lab activity.</span>
+    <span class="signoff">made by Yug Sarvaiya · roll no. 121 🔐</span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
