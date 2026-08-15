@@ -1,0 +1,2 @@
+https://cryptcipherrelay.web.app/ this is the website's URL for check the project live over the internet can be accessed on any device on any browser. 
+for check offline and for reference there are three main files uploaded named "index.html", "app.js", "style.css" which are the core files for using the tool/checking the functionality of the project/tool made accordingly to my understandings from the guidelines provided.
